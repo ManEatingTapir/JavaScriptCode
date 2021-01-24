@@ -33,7 +33,7 @@ async function print_all(database) {
         });
     }
     catch (error) {
-        console.error('Something went fucky:', error);
+        console.error('Something went kablooey:', error);
     }
 }
 
@@ -49,7 +49,7 @@ async function print_tapir(Tapirs, tapir_name) {
         });
     }
     catch (error) {
-        console.error('Something went fucky:', error);
+        console.error('Something went kablooey:', error);
     }
 }
 
