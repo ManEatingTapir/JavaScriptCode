@@ -70,21 +70,27 @@ class Node {
     }
 
     send(to, type, message, callback) {
+        // console.log('this is in the send method');
         let toNode = this[$network].nodes[to]
         if (!toNode || !this.neighbors.includes(to))
             return callback(new Error(`${to} is not reachable from ${this.name}`))
         let handler = this[$network].types[type]
         if (!handler)
             return callback(new Error("Unknown request type " + type))
-        if (Math.random() > 0.03) setTimeout(() => {
+        // console.log('this is still in the send method');
+        setTimeout(() => {
+            // console.log('this is in the send method but inside of a setTimeout');
             try {
+                // handler will run, the callback of (err, res) only is called if the handler calls it
                 handler(toNode, ser(message), this.name, (error, response) => {
-                    setTimeout(() => callback(error, ser(response)), 10)
+                    // console.log('this is in the handler method callback');
+                    setTimeout(() => callback(error, ser(response)), 100)
+                    // console.log('this is still in the handler method callback, but after a setTimeout whose callback calls the send method callback');
                 })
             } catch (e) {
                 callback(e)
             }
-        }, 10 + Math.floor(Math.random() * 10))
+        }, 10 + Math.floor(Math.random() * 10));
     }
 
     readStorage(name, callback) {
