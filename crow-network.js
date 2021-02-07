@@ -71,9 +71,15 @@ function gossipHandler(nest, content, source) {
     sendGossip(nest, content, source);
 }
 
+function connectionHandler(nest, {name, neighbors}, source) {
+    let connections = nest.state.connections;
+    if (JSON.stringify(connections.get(name)) == JSON.stringify(neighbors)) return;
+    connections.set(name, neighbors);
+    broadcastConnections(nest, name, source);
+}
 // <-- Other useful functions -->
 /**
- * Finds all neighbors of the given nest.
+ * Finds all neighbors of the given nest that are able to respond. Uses a simple ping request to check availability.
  * @param {Node} nest - Nest to check neighbors for
  * @returns {Promise<Array>} Promise object representing an array with all neighbors
  */
@@ -103,11 +109,31 @@ function sendGossip(nest, message, exceptFor = null) {
     for (let neighbor of nest.neighbors) {
         // if the nest is the source of the message skip
         if (exceptFor == neighbor) continue;
-        // send gossip request to nest
+        // send gossip request/message to neighbor
         request(nest, neighbor, 'gossip', message);
     }
 }
 
+function broadcastConnections(nest, name, exceptFor = null) {
+    for (let neighbor of nest.neighbors) {
+      if (neighbor == exceptFor) continue;
+      request(nest, neighbor, "connections", {
+        name,
+        neighbors: nest.state.connections.get(name)
+      });
+    }
+  }
+  
+/**
+ * Checks a given nest's storage for the given piece of information. Returns a Promise that will resolve to the data requested.
+ * @param {Node} nest - The nest containing the data to read.
+ * @param {String} name - The name of the key to check in storage.
+ */
+function storage(nest, name) {
+    return new Promise(resolve => {
+        nest.readStorage(name, result => resolve(result));
+    });
+}
 // <-- Where code execution will actually begin -->
 // Add support for the various message types
 requestType("note", noteHandler);
@@ -123,3 +149,4 @@ console.log('this is in the main program');
 availableNeighbors(bigOak).then(val => console.log(val));
 sendGossip(bigOak, 'Some gossip');
 console.log('still in the main program');
+storage(bigOak, 'enemies').then( val => console.log("Got", val));
