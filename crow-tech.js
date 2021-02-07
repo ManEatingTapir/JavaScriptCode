@@ -64,9 +64,9 @@ class Node {
     constructor(name, neighbors, network, storage) {
         this.name = name
         this.neighbors = neighbors
-        this[$network] = network
+        this[$network] = network // disallow viewing of the network any node is associated with
         this.state = Object.create(null)
-        this[$storage] = storage
+        this[$storage] = storage // disallow direct viewing of the storage, forcing use of read/write methods
     }
 
     send(to, type, message, callback) {
