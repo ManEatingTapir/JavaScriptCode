@@ -71,7 +71,7 @@ function gossipHandler(nest, content, source) {
     sendGossip(nest, content, source);
 }
 
-function connectionHandler(nest, {name, neighbors}, source) {
+function connectionsHandler(nest, {name, neighbors}, source) {
     let connections = nest.state.connections;
     if (JSON.stringify(connections.get(name)) == JSON.stringify(neighbors)) return;
     connections.set(name, neighbors);
@@ -114,16 +114,23 @@ function sendGossip(nest, message, exceptFor = null) {
     }
 }
 
+/**
+ * Sends the connections of a given nest to all other reachable nests in the network. 
+ * @param {Node} nest - The nest whose connections will be broadcast 
+ * @param {String} name - The name of the nest being broadcast
+ * @param {Node} [exceptFor] - A nest to not send connections to. Used to skip nests that were the source of the previous broadcast. By default is null. 
+ */
 function broadcastConnections(nest, name, exceptFor = null) {
     for (let neighbor of nest.neighbors) {
       if (neighbor == exceptFor) continue;
       request(nest, neighbor, "connections", {
         name,
+        // this is used so a neighbors parameter is not needed to be passed. Depends on the nest having the connections already stored
         neighbors: nest.state.connections.get(name)
       });
     }
   }
-  
+
 /**
  * Checks a given nest's storage for the given piece of information. Returns a Promise that will resolve to the data requested.
  * @param {Node} nest - The nest containing the data to read.
@@ -134,17 +141,40 @@ function storage(nest, name) {
         nest.readStorage(name, result => resolve(result));
     });
 }
+
+// Don't worry too much about understanding this deeply, it's graph theory/route finding stuff. Look into at a later time
+function findRoute(from, to, connections) {
+    let work = [{at: from, via: null}];
+    for (let i = 0; i < work.length; i++) {
+      let {at, via} = work[i];
+      for (let next of connections.get(at) || []) {
+        if (next == to) return via;
+        if (!work.some(w => w.at == next)) {
+          work.push({at: next, via: via || next});
+        }
+      }
+    }
+    return null;
+  }
 // <-- Where code execution will actually begin -->
 // Add support for the various message types
 requestType("note", noteHandler);
 requestType("ping", pingHandler);
 requestType('gossip', gossipHandler);
+requestType('connections', connectionsHandler);
 
 // Create gossip array on each nest's local state
 everywhere(nest => nest.state.gossip = []);
 request(bigOak, 'Cow Pasture', 'note', 'This is a note')
     .then((val) => console.log(val))
     .catch((err) => console.log(err));
+// Give each nest graph of connections/neighbors that each nest has
+everywhere(nest => {
+    nest.state.connections = new Map();
+    // Make sure each nest has its own neighbors in the connections map
+    nest.state.connections.set(nest.name, nest.neighbors);
+    broadcastConnections(nest, nest.name);
+})
 console.log('this is in the main program');
 availableNeighbors(bigOak).then(val => console.log(val));
 sendGossip(bigOak, 'Some gossip');
