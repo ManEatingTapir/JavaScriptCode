@@ -80,8 +80,7 @@ function connectionsHandler(nest, {name, neighbors}, source) {
 
 function routeHandler(nest, {target, type, content}) {
     // all needed logic is in the routeRequest function, this just wraps it in a handler
-    routeRequest(nest, target, type, content);
-    return;
+    return routeRequest(nest, target, type, content);
 }
 // <-- Other useful functions -->
 /**
@@ -149,17 +148,17 @@ function storage(nest, name) {
 }
 
 function routeRequest(nest, target, type, content) {
+    // A dedicated function is used here because the type of request will be varied, not route, so a dedicated request type has to be
+    // defined that handles routing 
     // if the target is an immediate neighbor
     if (nest.neighbors.includes(target)) {
-        request(nest, target, type, content);
-        return;
+        return request(nest, target, type, content);
     } else {
         // send a route-type request to a nest, alerting it to continue passing the message along
         let via = findRoute(nest.name, target, nest.state.connections);
         if (!via) throw new Error(`No route available to ${target}`);
         // make the request to the next hop, telling it to continue this behavior while passing the target/type/content as the content of the request itself
-        request(nest, via, 'route', {target, type, content});
-        return;
+        return request(nest, via, 'route', {target, type, content});
     }
 }
 // Don't worry too much about understanding this deeply, it's graph theory/route finding stuff. Look into at a later time
@@ -201,3 +200,9 @@ availableNeighbors(bigOak).then(val => console.log(val));
 sendGossip(bigOak, 'Some gossip');
 console.log('still in the main program');
 storage(bigOak, 'enemies').then( val => console.log("Got", val));
+// Need to wrap any call to routeRequest in a setTimeout because otherwise the connections won't have time to broadcast
+// and the route planning will fail
+setTimeout(() => {
+    // TODO: see what happens when you move the return statements around in routeRequest/routeHandler functions
+    routeRequest(bigOak, 'Church Tower', 'note', 'fuck').then(val => console.log(val));
+}, 3000);
