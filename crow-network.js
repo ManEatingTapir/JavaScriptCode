@@ -77,6 +77,12 @@ function connectionsHandler(nest, {name, neighbors}, source) {
     connections.set(name, neighbors);
     broadcastConnections(nest, name, source);
 }
+
+function routeHandler(nest, {target, type, content}) {
+    // all needed logic is in the routeRequest function, this just wraps it in a handler
+    routeRequest(nest, target, type, content);
+    return;
+}
 // <-- Other useful functions -->
 /**
  * Finds all neighbors of the given nest that are able to respond. Uses a simple ping request to check availability.
@@ -132,7 +138,7 @@ function broadcastConnections(nest, name, exceptFor = null) {
   }
 
 /**
- * Checks a given nest's storage for the given piece of information. Returns a Promise that will resolve to the data requested.
+ * Checks a given nest's storage for the given piece of information. Returns a Promise that will resolve to the data requested. Effectively a Promise wrapper for the readStorage method.
  * @param {Node} nest - The nest containing the data to read.
  * @param {String} name - The name of the key to check in storage.
  */
@@ -142,6 +148,20 @@ function storage(nest, name) {
     });
 }
 
+function routeRequest(nest, target, type, content) {
+    // if the target is an immediate neighbor
+    if (nest.neighbors.includes(target)) {
+        request(nest, target, type, content);
+        return;
+    } else {
+        // send a route-type request to a nest, alerting it to continue passing the message along
+        let via = findRoute(nest.name, target, nest.state.connections);
+        if (!via) throw new Error(`No route available to ${target}`);
+        // make the request to the next hop, telling it to continue this behavior while passing the target/type/content as the content of the request itself
+        request(nest, via, 'route', {target, type, content});
+        return;
+    }
+}
 // Don't worry too much about understanding this deeply, it's graph theory/route finding stuff. Look into at a later time
 function findRoute(from, to, connections) {
     let work = [{at: from, via: null}];
@@ -162,6 +182,7 @@ requestType("note", noteHandler);
 requestType("ping", pingHandler);
 requestType('gossip', gossipHandler);
 requestType('connections', connectionsHandler);
+requestType('route', routeHandler);
 
 // Create gossip array on each nest's local state
 everywhere(nest => nest.state.gossip = []);
