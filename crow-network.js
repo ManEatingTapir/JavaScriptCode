@@ -80,6 +80,7 @@ function connectionsHandler(nest, {name, neighbors}, source) {
 
 function routeHandler(nest, {target, type, content}) {
     // all needed logic is in the routeRequest function, this just wraps it in a handler
+    // return must be on same line as routeRequest, since that function does return something (a Promise)
     return routeRequest(nest, target, type, content);
 }
 // <-- Other useful functions -->
@@ -152,12 +153,15 @@ function routeRequest(nest, target, type, content) {
     // defined that handles routing 
     // if the target is an immediate neighbor
     if (nest.neighbors.includes(target)) {
+        // the return must be on the same line as the request, since the request returns a Promise value
+        // that will be used for further processing
         return request(nest, target, type, content);
     } else {
         // send a route-type request to a nest, alerting it to continue passing the message along
         let via = findRoute(nest.name, target, nest.state.connections);
         if (!via) throw new Error(`No route available to ${target}`);
         // make the request to the next hop, telling it to continue this behavior while passing the target/type/content as the content of the request itself
+        // again, return is on same line to pass the Promise returned by request on for further processing
         return request(nest, via, 'route', {target, type, content});
     }
 }
@@ -203,6 +207,5 @@ storage(bigOak, 'enemies').then( val => console.log("Got", val));
 // Need to wrap any call to routeRequest in a setTimeout because otherwise the connections won't have time to broadcast
 // and the route planning will fail
 setTimeout(() => {
-    // TODO: see what happens when you move the return statements around in routeRequest/routeHandler functions
     routeRequest(bigOak, 'Church Tower', 'note', 'fuck').then(val => console.log(val));
 }, 3000);
