@@ -83,6 +83,7 @@ function routeHandler(nest, {target, type, content}) {
     // return must be on same line as routeRequest, since that function does return something (a Promise)
     return routeRequest(nest, target, type, content);
 }
+
 // <-- Other useful functions -->
 /**
  * Finds all neighbors of the given nest that are able to respond. Uses a simple ping request to check availability.
@@ -181,6 +182,7 @@ function findRoute(from, to, connections) {
     }
     return null;
   }
+
 // <-- Where code execution will actually begin -->
 // Add support for the various message types
 requestType("note", noteHandler);
@@ -191,9 +193,6 @@ requestType('route', routeHandler);
 
 // Create gossip array on each nest's local state
 everywhere(nest => nest.state.gossip = []);
-request(bigOak, 'Cow Pasture', 'note', 'This is a note')
-    .then((val) => console.log(val))
-    .catch((err) => console.log(err));
 // Give each nest graph of connections/neighbors that each nest has
 everywhere(nest => {
     nest.state.connections = new Map();
@@ -201,10 +200,13 @@ everywhere(nest => {
     nest.state.connections.set(nest.name, nest.neighbors);
     broadcastConnections(nest, nest.name);
 })
-console.log('this is in the main program');
+console.log('This is in the main program');
 availableNeighbors(bigOak).then(val => console.log(val));
+request(bigOak, 'Cow Pasture', 'note', 'This is a note')
+    .then((val) => console.log(val))
+    .catch((err) => console.log(err));
 sendGossip(bigOak, 'Some gossip');
-console.log('still in the main program');
+console.log('Still in the main program');
 storage(bigOak, 'enemies').then( val => console.log("Got", val));
 // Need to wrap any call to routeRequest in a setTimeout because otherwise the connections won't have time to broadcast
 // and the route planning will fail
