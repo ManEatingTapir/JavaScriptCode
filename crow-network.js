@@ -93,11 +93,13 @@ function availableNeighbors(nest) {
     let requests = nest.neighbors.map(neighbor => {
         return request(nest, neighbor, 'ping')
             // request returns a promise, so the array will be composed of promises
-            // these callbacks will be called when the promises are used
+            // these callbacks will be called when the promises are used (inside Promise.all)
                 .then(() => true, () => false);
     });
     // Promise.all returns a promise that resolves to the values of the promises in the array
+    // The thing that the FUNCTION returns is a Promise
     return Promise.all(requests).then(result => {
+        // This will be used by any .then() that is attached to the Promise this function returns (see above comment)
         return nest.neighbors.filter((_, i) => result[i]);
     });
 }
@@ -207,5 +209,5 @@ storage(bigOak, 'enemies').then( val => console.log("Got", val));
 // Need to wrap any call to routeRequest in a setTimeout because otherwise the connections won't have time to broadcast
 // and the route planning will fail
 setTimeout(() => {
-    routeRequest(bigOak, 'Church Tower', 'note', 'fuck').then(val => console.log(val));
+    routeRequest(bigOak, 'Church Tower', 'note', 'This is a note').then(val => console.log(val));
 }, 3000);
