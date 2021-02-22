@@ -6,7 +6,8 @@ const { bigOak, defineRequestType, everywhere } = require('./crow-tech');
  * @param {Function} handler - The function that will handle the any requests
  */
 function requestType(name, handler) {
-    // the defineRequestType callback is literally just a wrapper around the send callback
+    // the defineRequestType callback is literally just a wrapper around the send callback, putting it in a 
+    // setTimeout function so it mimicks async functionality
     defineRequestType(name, (nest, content, source, callback) => {
         try {
             // .catch will handle if the value that was returned is a failure
@@ -27,6 +28,7 @@ function requestType(name, handler) {
  * @param {String} target - The name of the nest that it will be sent to
  * @param {String} type - The type of request that is being sent
  * @param {String} content - The content of the request
+ * @returns {Promise} Promise object representing the state of the request. If the handler for the request type returns a value, this will wrap that object.
  */
 function request(nest, target, type, content) {
     return new Promise((resolve, reject) => {
@@ -114,7 +116,7 @@ function availableNeighbors(nest) {
 }
 
 /**
- * Sends a piece of gossip from one nest to all its neighbors unless one is specified
+ * Sends a piece of gossip from one nest to all its neighbors unless one is specified to skip.
  * @param {Node} nest - The source nest
  * @param {String} message - The gossip to send
  * @param {Node} [exceptFor] - The nest to not send the gossip to. By default is null.
@@ -195,6 +197,12 @@ function network(nest) {
     return Array.from(nest.state.connections.keys());
 }
 
+/**
+ * Function to check all nests in a network for the specified entry. While it will start checking at the specified nest,
+ * it will go through the entire network if the entry is not found in the first nest.
+ * @param {Node} nest - The nest to check originally for the data.
+ * @param {String} name - Name of the key to check storage for.
+ */
 function findInStorage(nest, name) {
     return storage(nest, name).then(found => {
         // if the nest had the requested info in it return the data
@@ -204,29 +212,30 @@ function findInStorage(nest, name) {
     });
 }
 
-function findInRemoteStorage(nest, name) {
-    // get all other nests in network
-    let sources = network(nest).filter(n => n != nest.name);
-    // recursive function to loop through nests
-    function next() {
-        // if no more nests in network
-        if (sources.length == 0) {
-            return Promise.reject(new Error("Not found"));
-        } else {
-            // get random nest
-            let source = sources[Math.floor(Math.random() * sources.length)];
-            // remove source from list of nests not checked
-            sources = sources.filter(n => n != source);
-            console.log('About to try routing request for storage');
-            return routeRequest(nest, source, 'storage', name)
-                // if value isn't null, return the value, else call next again
-                // Stuff in here only runs when a .then() is attached to the Promise this function returns
-                .then(value => value != null ? value : next());
-        }
-    }
-    // start calls. Return needs to be on same line due to Promise chaining
-    return next();
-}
+// this is from when findInStorage wasn't written using async/await. Left in as note/example of the alternative.
+// function findInRemoteStorage(nest, name) {
+//     // get all other nests in network
+//     let sources = network(nest).filter(n => n != nest.name);
+//     // recursive function to loop through nests
+//     function next() {
+//         // if no more nests in network
+//         if (sources.length == 0) {
+//             return Promise.reject(new Error("Not found"));
+//         } else {
+//             // get random nest
+//             let source = sources[Math.floor(Math.random() * sources.length)];
+//             // remove source from list of nests not checked
+//             sources = sources.filter(n => n != source);
+//             console.log('About to try routing request for storage');
+//             return routeRequest(nest, source, 'storage', name)
+//                 // if value isn't null, return the value, else call next again
+//                 // Stuff in here only runs when a .then() is attached to the Promise this function returns
+//                 .then(value => value != null ? value : next());
+//         }
+//     }
+//     // start calls. Return needs to be on same line due to Promise chaining
+//     return next();
+// }
 
 // Don't worry too much about understanding this deeply, it's graph theory/route finding stuff. Look into at a later time
 function findRoute(from, to, connections) {
