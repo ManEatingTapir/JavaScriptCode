@@ -84,6 +84,12 @@ function routeHandler(nest, {target, type, content}) {
     return routeRequest(nest, target, type, content);
 }
 
+function storageHandler(nest, name) {
+    // WHY does this fail without a return statement
+    // but (nest, name) => storage(nest,name) works when passed as an arrow function
+    // to requestType raw versus passing this named function?!
+    return storage(nest, name);
+}
 // <-- Other useful functions -->
 /**
  * Finds all neighbors of the given nest that are able to respond. Uses a simple ping request to check availability.
@@ -101,6 +107,8 @@ function availableNeighbors(nest) {
     // The thing that the FUNCTION returns is a Promise
     return Promise.all(requests).then(result => {
         // This will be used by any .then() that is attached to the Promise this function returns (see above comment)
+        // Specifically, once the .then() runs, this will run, and the value it returns will be used by the 
+        // .then() attached to the Promise this function returned
         return nest.neighbors.filter((_, i) => result[i]);
     });
 }
@@ -144,6 +152,7 @@ function broadcastConnections(nest, name, exceptFor = null) {
  * Checks a given nest's storage for the given piece of information. Returns a Promise that will resolve to the data requested. Effectively a Promise wrapper for the readStorage method.
  * @param {Node} nest - The nest containing the data to read.
  * @param {String} name - The name of the key to check in storage.
+ * @returns {Promise} Promise object representing the value of the given key.
  */
 function storage(nest, name) {
     return new Promise(resolve => {
@@ -151,9 +160,16 @@ function storage(nest, name) {
     });
 }
 
+/**
+ * Sends a request of the specified type from one nest to another. A dedicated function is used because the actual type of the request sent varies, but only requests of type "route" will trigger searching for another "hop" in the network. This function takes care of the logic needed to check if the request needs to be sent further or if it can be sent to its destination without further routing.
+ * @param {Node} nest - The nest from which the message will be sent.
+ * @param {Node} target - The nest that the message will be delivered to.
+ * @param {String} type - The request type of the message (to dictate the handling behavior).
+ * @param {Object} content - The content of the message itself.
+ * @returns {Promise} Promise object representing the request's resolution. 
+ * @throws {Error} Error thrown if there is no route available to the targest nest.
+ */
 function routeRequest(nest, target, type, content) {
-    // A dedicated function is used here because the type of request will be varied, not route, so a dedicated request type has to be
-    // defined that handles routing 
     // if the target is an immediate neighbor
     if (nest.neighbors.includes(target)) {
         // the return must be on the same line as the request, since the request returns a Promise value
@@ -168,6 +184,50 @@ function routeRequest(nest, target, type, content) {
         return request(nest, via, 'route', {target, type, content});
     }
 }
+
+/**
+ * Returns the network that the given nest is part of.
+ * @param {Node} nest - Nest that is part of the desired network.
+ * @return {Array} - Array containing the name of all nests in the network.
+ */
+function network(nest) {
+    // Array.from is used because keys() returns an iterator, not an array itself
+    return Array.from(nest.state.connections.keys());
+}
+
+function findInStorage(nest, name) {
+    return storage(nest, name).then(found => {
+        // if the nest had the requested info in it return the data
+        if (found != null) return found;
+        // if it didn't, check other nests and return the data when it's found (or nothing if search fails)
+        else return findInRemoteStorage(nest, name);
+    });
+}
+
+function findInRemoteStorage(nest, name) {
+    // get all other nests in network
+    let sources = network(nest).filter(n => n != nest.name);
+    // recursive function to loop through nests
+    function next() {
+        // if no more nests in network
+        if (sources.length == 0) {
+            return Promise.reject(new Error("Not found"));
+        } else {
+            // get random nest
+            let source = sources[Math.floor(Math.random() * sources.length)];
+            // remove source from list of nests not checked
+            sources = sources.filter(n => n != source);
+            console.log('About to try routing request for storage');
+            return routeRequest(nest, source, 'storage', name)
+                // if value isn't null, return the value, else call next again
+                // Stuff in here only runs when a .then() is attached to the Promise this function returns
+                .then(value => value != null ? value : next());
+        }
+    }
+    // start calls. Return needs to be on same line due to Promise chaining
+    return next();
+}
+
 // Don't worry too much about understanding this deeply, it's graph theory/route finding stuff. Look into at a later time
 function findRoute(from, to, connections) {
     let work = [{at: from, via: null}];
@@ -190,6 +250,8 @@ requestType("ping", pingHandler);
 requestType('gossip', gossipHandler);
 requestType('connections', connectionsHandler);
 requestType('route', routeHandler);
+requestType('storage', storageHandler); // (nest, name) => storage(nest, name)
+
 
 // Create gossip array on each nest's local state
 everywhere(nest => nest.state.gossip = []);
@@ -211,5 +273,9 @@ storage(bigOak, 'enemies').then( val => console.log("Got", val));
 // Need to wrap any call to routeRequest in a setTimeout because otherwise the connections won't have time to broadcast
 // and the route planning will fail
 setTimeout(() => {
+    console.log("Inside timeout of main program");
     routeRequest(bigOak, 'Church Tower', 'note', 'This is a note').then(val => console.log(val));
+    console.log('After first route request has been sent');
+    // findInStorage(bigOak, "events on 2017-12-21").then(val => console.log(val));
+    console.log(findInRemoteStorage(bigOak, "events on 2017-12-21").then(val => console.log(val)));
 }, 3000);
