@@ -1,9 +1,11 @@
 const { bigOak, defineRequestType, everywhere } = require('./crow-tech');
 
 /**
- * Promise wrapper for defineRequestType
- * @param {String} name - Name of request type the handler will be responsible for
- * @param {Function} handler - The function that will handle the any requests
+ * Promise wrapper for defineRequestType. Specificallly, wraps the handler function in a function that will both
+ * convert the output of the handler to a Promise as well as handle using a callback function to signal 
+ * when it is done.
+ * @param {String} name - Name of request type the handler will be responsible for.
+ * @param {Function} handler - The function that will handle any requests of that type.
  */
 function requestType(name, handler) {
     // the defineRequestType callback is literally just a wrapper around the send callback, putting it in a 
@@ -23,12 +25,13 @@ function requestType(name, handler) {
 }
 
 /**
- * Promise wrapper for send.
- * @param {Node} nest - The nest that the request will be sent from
- * @param {String} target - The name of the nest that it will be sent to
- * @param {String} type - The type of request that is being sent
- * @param {String} content - The content of the request
- * @returns {Promise} Promise object representing the state of the request. If the handler for the request type returns a value, this will wrap that object.
+ * Promise wrapper for send. Specifically, creates a new Promise that will call the send method, and wire the
+ * resolve/reject situations to send's callback.
+ * @param {Node} nest - The nest that the request will be sent from.
+ * @param {String} target - The name of the nest that it will be sent to.
+ * @param {String} type - The type of request that is being sent.
+ * @param {String} content - The content of the request.
+ * @returns {Promise} Promise object representing the return value of the request, or the reason why the request failed.
  */
 function request(nest, target, type, content) {
     return new Promise((resolve, reject) => {
@@ -151,7 +154,8 @@ function broadcastConnections(nest, name, exceptFor = null) {
   }
 
 /**
- * Checks a given nest's storage for the given piece of information. Returns a Promise that will resolve to the data requested. Effectively a Promise wrapper for the readStorage method.
+ * Checks a given nest's storage for the given piece of information. Returns a Promise that will resolve
+ * to the data requested. Effectively a Promise wrapper for the readStorage method.
  * @param {Node} nest - The nest containing the data to read.
  * @param {String} name - The name of the key to check in storage.
  * @returns {Promise} Promise object representing the value of the given key.
@@ -163,7 +167,10 @@ function storage(nest, name) {
 }
 
 /**
- * Sends a request of the specified type from one nest to another. A dedicated function is used because the actual type of the request sent varies, but only requests of type "route" will trigger searching for another "hop" in the network. This function takes care of the logic needed to check if the request needs to be sent further or if it can be sent to its destination without further routing.
+ * Sends a request of the specified type from one nest to another. A dedicated function is used
+ * because the actual type of the request sent varies, but only requests of type "route" will trigger searching
+ * for another "hop" in the network. This function takes care of the logic needed to check if the request needs
+ * to be sent further or if it can be sent to its destination without further routing.
  * @param {Node} nest - The nest from which the message will be sent.
  * @param {Node} target - The nest that the message will be delivered to.
  * @param {String} type - The request type of the message (to dictate the handling behavior).
@@ -202,14 +209,27 @@ function network(nest) {
  * it will go through the entire network if the entry is not found in the first nest.
  * @param {Node} nest - The nest to check originally for the data.
  * @param {String} name - Name of the key to check storage for.
+ * @returns {Promise} Promise object representing the returned value.
+ * @throws {Error} If no value for the requested key exists in any nests.
  */
-function findInStorage(nest, name) {
-    return storage(nest, name).then(found => {
-        // if the nest had the requested info in it return the data
-        if (found != null) return found;
-        // if it didn't, check other nests and return the data when it's found (or nothing if search fails)
-        else return findInRemoteStorage(nest, name);
-    });
+async function findInStorage(nest, name) {
+    // check if local nest has data
+    let local = await storage(nest, name);
+    if (local != null) return local;
+
+    // check other nests in network, filtering out the local nest
+    let sources = network(nest).filter(n => n != nest.name);
+    while (sources.length > 0) {
+        // get random nest
+        let source = sources[Math.floor(Math.random() * sources.length)];
+        // remove the nest from sources
+        sources = sources.filter(n => n != source);
+
+        let data = await routeRequest(nest, source, 'storage', name);
+        if (data != null) return data;
+    }
+    // at this point can assume data does not exist
+    throw new Error('Data not found');
 }
 
 // this is from when findInStorage wasn't written using async/await. Left in as note/example of the alternative.
@@ -285,6 +305,6 @@ setTimeout(() => {
     console.log("Inside timeout of main program");
     routeRequest(bigOak, 'Church Tower', 'note', 'This is a note').then(val => console.log(val));
     console.log('After first route request has been sent');
-    // findInStorage(bigOak, "events on 2017-12-21").then(val => console.log(val));
-    console.log(findInRemoteStorage(bigOak, "events on 2017-12-21").then(val => console.log(val)));
+    findInStorage(bigOak, "events on 2017-12-21").then(val => console.log(val));
+    console.log('After storage read request has been sent');
 }, 3000);
