@@ -232,6 +232,30 @@ async function findInStorage(nest, name) {
     throw new Error('Data not found');
 }
 
+/**
+ * Given a starting nest, searches a single specified nest for a piece of information. Does not search the entire network like 
+ * findInStorage.
+ * @param {Node} nest - The nest that the search will start at.
+ * @param {String} source - The name of the nest whose storage will be searched.
+ * @param {String} key - The name of the data to be searched for.
+ * @returns {Promise} - Promise object wrapping the value of the specified key.
+ */
+function findInSingleStorage(nest, source, key) {
+    // if nest and source are the same
+    if (source == nest.name) return storage(nest, key);
+    // make request to other nest
+    return routeRequest(nest, source, 'storage', key);
+}
+
+// Right now this is broken
+async function chickTotal(nest, year) {
+    let list = ""
+
+    await Promise.all(network(nest).map(async name => {
+        list += `${name}: ${await findInSingleStorage(nest, name, `chicks in ${year}`)}\n`;
+    }));
+    return list;
+}
 // this is from when findInStorage wasn't written using async/await. Left in as note/example of the alternative.
 // function findInRemoteStorage(nest, name) {
 //     // get all other nests in network
@@ -307,4 +331,5 @@ setTimeout(() => {
     console.log('After first route request has been sent');
     findInStorage(bigOak, "events on 2017-12-21").then(val => console.log(val));
     console.log('After storage read request has been sent');
+    chickTotal(bigOak, '2017').then(console.log);
 }, 3000);
