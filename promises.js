@@ -37,6 +37,32 @@ function crapRead(filename) {
     });
 }
 
+// My own implementation of Promise.all as an exercise
+// Not the best implementation, since multiple calls to map() plus the half second delay is very not optimal.
+function Promise_all(promises) {
+    return new Promise((resolve, reject) => {
+      let count = promises.length;
+      let result = [];
+      if (count == 0) resolve(result);
+      function next() {
+        promises.map((promise, index) => {
+          promise.then(val => {
+            count = count - 1;
+            result[index] = val;
+          })
+          .catch(err => { reject(err); });
+        });
+      setTimeout(() => {
+         if (count == 0) resolve(result);
+        else {
+           next();
+        }
+      }, 500);
+      }
+      next();
+    });
+  }
+
 // <-- Actual execution will begin here -->
 console.log("Begin execution");
 crapRead('./.gitignore')
