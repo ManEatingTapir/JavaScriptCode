@@ -247,14 +247,57 @@ function findInSingleStorage(nest, source, key) {
     return routeRequest(nest, source, 'storage', key);
 }
 
-// Right now this is broken
+/**
+ * Lists the number of chicks born in each nest in a given year.
+ * @param {Node} nest - The nest to start the requests at.
+ * @param {String} year - The year in form 'chicks in year' to poll.
+ * @returns {String} String with the name of the nests followed by the number of chicks born in each nest, separated
+ * by newlines. 
+ */
 async function chickTotal(nest, year) {
-    let list = ""
+    let promises = network(nest).map(async name => {
+        return `${name}: ${await findInSingleStorage(nest, name, `chicks in ${year}`)}`;
+    });
+    let result = await Promise.all(promises);
+    return result.join('\n');
+    // let list = "";
+    // await Promise.all(network(nest).map(async name => {
+        // this fails because map will run before any of the requests have time to return, so each request will always start
+        // with the value of list at the time map began execution; in this case, an empty string
+    //     list += `${name}: ${await findInSingleStorage(nest, name, `chicks in ${year}`)}\n`;
+    // }));
+    // return list;
+}
 
-    await Promise.all(network(nest).map(async name => {
-        list += `${name}: ${await findInSingleStorage(nest, name, `chicks in ${year}`)}\n`;
-    }));
-    return list;
+async function locateScalpel(nest) {
+    let currentNest = nest.name;
+    let nextNest = await findInSingleStorage(nest, nest.name, 'scalpel');
+    
+    while(currentNest != nextNest) {
+        currentNest = nextNest;
+        nextNest = await findInSingleStorage(nest, currentNest, 'scalpel');
+    }
+    return currentNest;
+}
+
+// Same functionality as locateScalpel, but without async/await
+function locateScalpel2(nest) {
+    let currentNest = nest.name;
+    function next() {
+        return findInSingleStorage(nest, currentNest, 'scalpel')
+            .then(val => {
+                if (val != currentNest) {
+                    // console.log(currentNest);
+                    // console.log(val);
+                    currentNest = val;
+                    return next();
+                }
+                else {
+                    return val;
+                }
+            });
+    }
+    return next();
 }
 // this is from when findInStorage wasn't written using async/await. Left in as note/example of the alternative.
 // function findInRemoteStorage(nest, name) {
@@ -332,4 +375,7 @@ setTimeout(() => {
     findInStorage(bigOak, "events on 2017-12-21").then(val => console.log(val));
     console.log('After storage read request has been sent');
     chickTotal(bigOak, '2017').then(console.log);
+    console.log('About to begin scalpel execution');
+    locateScalpel(bigOak).then(console.log);
+    locateScalpel2(bigOak).then(console.log);
 }, 3000);
