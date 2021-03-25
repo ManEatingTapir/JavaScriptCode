@@ -1,0 +1,52 @@
+<DOCTYPE html>
+<html lang="en-US">
+    <head>
+        <meta charset="utf-8">
+    </head>
+    <body>
+        <div>
+            <p>A paragraph inside of a div with a 
+                <span>span inside of it that also has a 
+                    <button>button</button> in it.
+                </span>
+            </p>
+        </div>
+        <script>
+            
+            let div = document.querySelector('div');
+            let para = document.querySelector('p');
+            let span = document.querySelector('span');
+            let button = document.querySelector('button');
+
+            div.addEventListener('click', (event) => {
+                let newNode = document.createElement('p');
+                let text = document.createTextNode('This is from the div event listener');
+                newNode.appendChild(text);
+                console.log(event.target.nodeName);
+                document.body.appendChild(newNode);
+            });
+    
+            para.addEventListener('click', (event) => {
+                let newNode = document.createElement('p');
+                let text = document.createTextNode('This is from the paragraph event listener');
+                newNode.appendChild(text);
+                document.body.appendChild(newNode);
+            });
+    
+            span.addEventListener('click', (event) => {
+                let newNode = document.createElement('p');
+                let text = document.createTextNode('This is from the span event listener');
+                newNode.appendChild(text);
+                document.body.appendChild(newNode);
+            });
+    
+            button.addEventListener('click', (event) => {
+                let newNode = document.createElement('p');
+                let text = document.createTextNode('This is from the button event listener');
+                newNode.appendChild(text);
+                document.body.appendChild(newNode);
+            });
+        </script>
+    </body>
+    
+</html>
