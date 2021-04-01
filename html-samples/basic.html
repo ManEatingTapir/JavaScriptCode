@@ -2,6 +2,7 @@
 <html>
   <head>
     <title>My home page</title>
+    <meta charset="utf-8">
     <link rel="stylesheet" href="basic.css">
   </head>
   <body>
@@ -21,16 +22,31 @@
       </script>
     </div>
     <div class="section">
-      <script>
-        console.log(sections[1].children);
-      </script>
       <h1>Section 2</h1>
-      <p>Paragraph one</p>
+      <p>Paragraph 1</p>
       <p>Paragraph 2</p>
       <p>Paragraph 3</p>
+      <script>
+        let paragraphs = sections[1].getElementsByTagName('p');
+        setTimeout(() => {
+          sections[1].insertBefore(paragraphs[2], paragraphs[1]);
+        }, 1000);
+        setTimeout(() => {
+          sections[1].replaceChild(paragraphs[2], paragraphs[1]);
+        }, 2000);
+      </script>
     </div>
     <div class="section">
-
+      <h1>Section 3</h1>
+      <button id='button-2'>Use once button</button>
+      <script>
+        button =document.getElementById('button-2');
+        function once() {
+          sections[2].appendChild(document.createTextNode('Button used'));
+          button.removeEventListener('click', once);
+        }
+        button.addEventListener('click', once);
+      </script>
     </div>
     <div class="section">
 
