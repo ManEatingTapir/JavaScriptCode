@@ -5,8 +5,20 @@
     <link rel="stylesheet" href="basic.css">
   </head>
   <body>
+    <script>
+      var sections = document.getElementsByClassName('section'); // I can access this inside of the other div elements
+    </script>
     <div class="section">
-      <p>lorem ipsum dolor</p>
+      <h1>Section 1</h1>
+      <p>Stuff about adding stuff to the DOM</p>
+      <button id='button-one'>Add a paragraph</button>
+      <script>
+        let button = document.getElementById('button-one');
+        button.addEventListener('click', () => {
+          let text = document.createTextNode('This was added');
+          sections[0].appendChild(text);
+        });
+      </script>
     </div>
     <div class="section">
 
