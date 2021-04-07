@@ -8,6 +8,30 @@
   <body>
     <script>
       var sections = document.getElementsByClassName('section'); // I can access this inside of the other div elements
+
+      window.addEventListener('keydown', event => {
+        if (event.key == 'v') {
+          document.body.style.background = 'violet';
+        }
+        if (event.key == 'b') {
+          document.body.style.background = 'blue';
+        }
+        if (event.key == 'r') {
+          document.body.style.background = 'red';
+        }
+      });
+
+      window.addEventListener('keyup', event => {
+        if (event.key == 'v') {
+          document.body.style.background = 'black';
+        }
+        if (event.key == 'b') {
+          document.body.style.background = 'black';
+        }
+        if (event.key == 'r') {
+          document.body.style.background = 'black';
+        }
+      });
     </script>
     <div class="section">
       <h1>Section 1</h1>
