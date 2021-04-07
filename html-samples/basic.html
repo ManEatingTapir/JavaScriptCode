@@ -72,8 +72,16 @@
         button.addEventListener('click', once);
       </script>
     </div>
-    <div class="section">
-
+    <div class="section" id="drawing">
+      <script>
+        sections[3].addEventListener('click', event => {
+          let dot = document.createElement('div');
+          dot.className = 'dot';
+          dot.style.left = (event.pageX - 4) + "px"; // The -4 is to center the dot on the click rather than top left
+          dot.style.top = (event.pageY - 4) + "px";
+          sections[3].appendChild(dot);
+        });
+      </script>
     </div>
   </body>
 </html>

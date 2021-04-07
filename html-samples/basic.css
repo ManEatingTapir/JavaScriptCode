@@ -9,3 +9,15 @@ body {
     padding: 20px;
     background: black;
 }
+
+#drawing {
+    height: 200px;
+}
+
+.dot {
+    height: 8px;
+    width: 8px;
+    border-radius: 2px;
+    background: yellow;
+    position: absolute;
+}
