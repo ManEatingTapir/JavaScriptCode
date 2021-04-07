@@ -4,3 +4,8 @@
     color: black;
     margin-top: 5px;
 }
+
+body {
+    padding: 20px;
+    background: black;
+}
